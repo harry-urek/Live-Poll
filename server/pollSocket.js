@@ -1,4 +1,4 @@
-const PollSession = require('../models/pollSession');
+const PollSession = require('./pollModel');
 const { startTimer, stopTimer } = require('../utils/timer');
 
 function registerPollSocket(io, socket) {
