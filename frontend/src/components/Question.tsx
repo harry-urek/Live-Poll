@@ -1,4 +1,8 @@
 function Question() {
+    function handleOptionSelect(index: any): void {
+        throw new Error("Function not implemented.")
+    }
+
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-base-200 px-6 ">
             <div className="  w-full max-w-2xl">
@@ -16,24 +20,29 @@ function Question() {
                     <div className="card-body bg-neutral text-neutral-content rounded-t-2xl py-6">
                         <h2 className="card-title text-lg font-medium">currentQuestion    ...text... </h2>
                     </div>
-                    <div className="card-body pt-6">
-                        <div className="flex">
-                            <div className="badge badge-primary text-white font-medium mr-4 w-6 h-6 ">1</div>
-                            <progress className="progress b-2 p-4 space-y-3" value={25} max="100">Option 1</progress>
+                    <div className="card-body pt-6 pb-8">
+                        <div className="space-y-3">
+                            {currentQuestion.options.map((option, index) => (
+                                <div
+                                    key={index}
+                                    onClick={() => handleOptionSelect(index)}
+                                    className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${selectedOption === index
+                                        ? 'border-primary bg-primary/10 shadow-lg'
+                                        : 'border-base-300 bg-base-50 hover:border-base-400'
+                                        } ${isSubmitted ? 'cursor-not-allowed opacity-70' : ''}`}
+                                >
+                                    {/* Option Number Badge */}
+                                    <div className={`badge text-white font-medium mr-4 w-6 h-6 ${selectedOption === index ? 'badge-primary' : 'badge-neutral'
+                                        }`}>
+                                        {index + 1}
+                                    </div>
+                                    {/* Option Text */}
+                                    <span className="text-lg text-base-content font-medium">
+                                        {option}
+                                    </span>
+                                </div>
+                            ))}
                         </div>
-                        <div className="flex">
-                            <div className="badge badge-primary text-white font-medium mr-4 w-6 h-6 ">1</div>
-                            <progress className="progress b-2 p-4 space-y-3" value={25} max="100">Option 1</progress>
-                        </div>
-                        <div className="flex">
-                            <div className="badge badge-primary text-white font-medium mr-4 w-6 h-6 ">1</div>
-                            <progress className="progress b-2 p-4 space-y-3" value={25} max="100">Option 1</progress>
-                        </div>
-                        <div className="flex">
-                            <div className="badge badge-primary text-white font-medium mr-4 w-6 h-6 ">1</div>
-                            <progress className="progress b-2 p-4 space-y-3" value={25} max="100">Option 1</progress>
-                        </div>
-
                     </div>
                 </div>
 
