@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { io, Socket } from 'socket.io-client';
 
 function AddQuestion() {
     const [question, setQuestion] = useState('');
@@ -7,6 +8,27 @@ function AddQuestion() {
         { text: '', isCorrect: false },
         { text: '', isCorrect: false }
     ]);
+    const [socket, setSocket] = useState<Socket | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Initialize socket connection for teacher
+    useEffect(() => {
+        const newSocket = io('http://localhost:5000');
+        setSocket(newSocket);
+
+        newSocket.on('connect', () => {
+            console.log('Teacher socket connected:', newSocket.id);
+        });
+
+        newSocket.on('connect_error', (error) => {
+            console.error('Teacher socket connection error:', error);
+        });
+
+        return () => {
+            newSocket.close();
+        };
+    }, []);
+
     const addOption = () => {
         if (options.length < 6) {
             setOptions([...options, { text: '', isCorrect: false }]);
@@ -34,9 +56,41 @@ function AddQuestion() {
     };
 
     const handleSubmit = () => {
-        // Handle question submission logic here
-        console.log({ question, timeLimit, options });
+        if (!socket || !question.trim() || options.every(opt => !opt.text.trim()) || isSubmitting) {
+            console.log('Cannot submit - missing socket, question, options, or already submitting');
+            return;
+        }
+
+        setIsSubmitting(true);
+        console.log('Teacher asking question - first showing waiting message');
+
+        // First, show waiting message to students
+        socket.emit('teacher:showWaiting');
+
+        // Add a small delay, then ask the question
+        setTimeout(() => {
+            const questionData = {
+                text: question,
+                options: options.filter(opt => opt.text.trim()).map(opt => opt.text),
+                correctAnswer: options.findIndex(opt => opt.isCorrect),
+                timeLimit: timeLimit
+            };
+
+            console.log('Now sending question:', questionData);
+            socket.emit('teacher:askQuestion', questionData);
+
+            // Reset form after successful submission
+            setTimeout(() => {
+                setIsSubmitting(false);
+                setQuestion('');
+                setOptions([
+                    { text: '', isCorrect: false },
+                    { text: '', isCorrect: false }
+                ]);
+            }, 2000);
+        }, 1000); // 1 second delay to show waiting state
     };
+
     return (
         <div className="min-h-screen bg-purple-100 p-8 pl-16">
             {/* Header with Intervue Poll badge */}
@@ -165,10 +219,10 @@ function AddQuestion() {
             <div className="fixed bottom-8 right-8">
                 <button
                     onClick={handleSubmit}
-                    disabled={!question.trim() || options.every(opt => !opt.text.trim())}
+                    disabled={!question.trim() || options.every(opt => !opt.text.trim()) || isSubmitting}
                     className="bg-purple-500 hover:bg-purple-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-8 py-3 rounded-lg text-lg font-medium shadow-lg transition-colors"
                 >
-                    Ask Question
+                    {isSubmitting ? 'Asking...' : 'Ask Question'}
                 </button>
             </div>
         </div>

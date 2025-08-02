@@ -1,55 +1,171 @@
-function Question() {
-    function handleOptionSelect(index: any): void {
-        throw new Error("Function not implemented.")
+import { useState, useEffect, useCallback } from 'react';
+import { Socket } from 'socket.io-client';
+
+interface QuestionProps {
+    socket: Socket | null;
+    questionData: QuestionData;
+    serverTimeLeft: number;
+}
+
+interface QuestionData {
+    text: string;
+    options: string[];
+    timeLimit: number;
+    correctAnswer?: number;
+}
+
+function Question({ socket, questionData, serverTimeLeft }: QuestionProps) {
+    const [currentQuestion, setCurrentQuestion] = useState<QuestionData | null>(null);
+    const [selectedOption, setSelectedOption] = useState<number | null>(null);
+    const [isSubmitted, setIsSubmitted] = useState(false);
+    const [timeLeft, setTimeLeft] = useState(0);
+
+    // Update question when questionData prop changes
+    useEffect(() => {
+        if (questionData) {
+            console.log('Question component: Received question data via props:', questionData);
+            setCurrentQuestion(questionData);
+            setSelectedOption(null);
+            setIsSubmitted(false);
+            setTimeLeft(questionData.timeLimit || 60);
+        }
+    }, [questionData]);
+
+    // Update time from server instead of local countdown
+    useEffect(() => {
+        setTimeLeft(serverTimeLeft);
+    }, [serverTimeLeft]);
+
+    const handleSubmitAnswer = useCallback(() => {
+        if (selectedOption === null || isSubmitted || !socket || !currentQuestion) return;
+
+        const answer = currentQuestion.options[selectedOption];
+        socket.emit('student:submitAnswer', answer);
+        setIsSubmitted(true);
+    }, [selectedOption, isSubmitted, socket, currentQuestion]);
+
+    useEffect(() => {
+        if (!socket) return;
+
+        console.log('Question component: Setting up socket listeners for completion events only');
+
+        // Only listen for question completion, not new questions (those come via props now)
+        socket.on('poll:complete', (data) => {
+            console.log('Question component: Poll completed', data);
+            setIsSubmitted(true);
+        });
+
+        return () => {
+            socket.off('poll:complete');
+        };
+    }, [socket]);
+
+    // Auto-submit when time runs out (server-controlled)
+    useEffect(() => {
+        if (timeLeft <= 0 && selectedOption !== null && !isSubmitted && currentQuestion) {
+            console.log('Auto-submitting answer due to server timeout');
+            handleSubmitAnswer();
+        }
+    }, [timeLeft, selectedOption, isSubmitted, currentQuestion, handleSubmitAnswer]);
+
+    const handleOptionSelect = (index: number) => {
+        if (isSubmitted || timeLeft <= 0) return;
+        setSelectedOption(index);
+    };
+
+
+    if (!currentQuestion) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-blue-100 px-6">
+                <div className="w-full max-w-2xl text-center">
+                    <h1 className="text-2xl font-bold text-gray-900 mb-4">Question Component</h1>
+                    <p className="text-gray-600">No question data available. Waiting for question...</p>
+                    <div className="mt-4 p-4 bg-yellow-100 rounded-lg">
+                        <p className="text-sm text-gray-700">Debug: Question component loaded but no currentQuestion set</p>
+                        <p className="text-sm text-gray-700">Socket connected: {socket ? 'Yes' : 'No'}</p>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-base-200 px-6 ">
-            <div className="  w-full max-w-2xl">
-                <div className="flex justify-between items-center mb-8" >
-                    <h1>Question</h1>
-                    <div className="flex items-center text-error text-lg font-medium">
+        <div className="flex flex-col items-center justify-center min-h-screen bg-blue-100 px-6">
+            <div className="w-full max-w-2xl">
+                <div className="flex justify-between items-center mb-8">
+                    <h1 className="text-2xl font-bold text-gray-900">Question</h1>
+                    <div className="flex items-center text-red-600 text-lg font-medium">
                         <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                        </svg>00:00
-                        {/* 00:{timeLeft.toString().padStart(2, '0')} */}
+                        </svg>
+                        00:{timeLeft.toString().padStart(2, '0')}
                     </div>
                 </div>
-                <div className="card bg-base-100 shadow-xl mb-8">
+
+                <div className="bg-white shadow-xl rounded-lg mb-8">
                     {/* Question Header */}
-                    <div className="card-body bg-neutral text-neutral-content rounded-t-2xl py-6">
-                        <h2 className="card-title text-lg font-medium">currentQuestion    ...text... </h2>
+                    <div className="bg-gray-800 text-white rounded-t-lg py-6 px-6">
+                        <h2 className="text-lg font-medium">{currentQuestion.text}</h2>
                     </div>
-                    <div className="card-body pt-6 pb-8">
+
+                    <div className="p-6">
                         <div className="space-y-3">
                             {currentQuestion.options.map((option, index) => (
                                 <div
                                     key={index}
                                     onClick={() => handleOptionSelect(index)}
                                     className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${selectedOption === index
-                                        ? 'border-primary bg-primary/10 shadow-lg'
-                                        : 'border-base-300 bg-base-50 hover:border-base-400'
-                                        } ${isSubmitted ? 'cursor-not-allowed opacity-70' : ''}`}
+                                        ? 'border-purple-500 bg-purple-50 shadow-lg'
+                                        : 'border-gray-300 bg-gray-50 hover:border-gray-400'
+                                        } ${isSubmitted || timeLeft <= 0 ? 'cursor-not-allowed opacity-70' : ''}`}
                                 >
                                     {/* Option Number Badge */}
-                                    <div className={`badge text-white font-medium mr-4 w-6 h-6 ${selectedOption === index ? 'badge-primary' : 'badge-neutral'
+                                    <div className={`rounded-full w-8 h-8 flex items-center justify-center text-white font-medium mr-4 ${selectedOption === index ? 'bg-purple-500' : 'bg-gray-500'
                                         }`}>
                                         {index + 1}
                                     </div>
                                     {/* Option Text */}
-                                    <span className="text-lg text-base-content font-medium">
+                                    <span className="text-lg text-gray-800 font-medium">
                                         {option}
                                     </span>
                                 </div>
                             ))}
                         </div>
+
+                        {/* Submit Button */}
+                        {selectedOption !== null && !isSubmitted && timeLeft > 0 && (
+                            <div className="mt-6 flex justify-center">
+                                <button
+                                    onClick={handleSubmitAnswer}
+                                    className="bg-purple-500 hover:bg-purple-600 text-white px-8 py-3 rounded-lg text-lg font-medium transition-colors"
+                                >
+                                    Submit Answer
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Submitted State */}
+                        {isSubmitted && (
+                            <div className="mt-6 flex justify-center">
+                                <div className="bg-green-100 text-green-800 px-6 py-3 rounded-lg text-lg font-medium">
+                                    ✅ Answer Submitted! Waiting for results...
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Time Up State */}
+                        {timeLeft <= 0 && !isSubmitted && (
+                            <div className="mt-6 flex justify-center">
+                                <div className="bg-red-100 text-red-800 px-6 py-3 rounded-lg text-lg font-medium">
+                                    ⏰ Time's up! Waiting for results...
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
-
             </div>
-
         </div>
-    )
+    );
 }
 
-export default Question
+export default Question;

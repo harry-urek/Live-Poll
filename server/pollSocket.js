@@ -1,5 +1,5 @@
 const PollSession = require('./pollModel');
-const { startTimer, stopTimer } = require('../utils/timer');
+const { startTimer, stopTimer } = require('./utils/timer');
 
 function registerPollSocket(io, socket) {
 
@@ -7,9 +7,26 @@ function registerPollSocket(io, socket) {
         PollSession.students[socket.id] = { name, answered: false };
         socket.emit('poll:joined', { name });
 
-        // Send current question
+        // Send current question with timer sync if available
         if (PollSession.currentQuestion) {
-            socket.emit('poll:newQuestion', PollSession.currentQuestion);
+            const { getRemainingTime } = require('./utils/timer');
+            const timeLeft = PollSession.timer ? getRemainingTime(PollSession.timer) : 0;
+
+            const questionWithSync = {
+                ...PollSession.currentQuestion,
+                serverTimestamp: Date.now(),
+                timeLeft: timeLeft
+            };
+
+            socket.emit('poll:newQuestion', questionWithSync);
+
+            // Also send current time update immediately
+            if (timeLeft > 0) {
+                socket.emit('poll:timeUpdate', {
+                    timeLeft,
+                    serverTimestamp: Date.now()
+                });
+            }
         }
 
         // Send  results
@@ -21,6 +38,14 @@ function registerPollSocket(io, socket) {
         io.emit('poll:studentList', PollSession.students);
     });
 
+    // Teacher shows waiting message to students
+    socket.on('teacher:showWaiting', () => {
+        // Clear current question and show waiting to students
+        PollSession.currentQuestion = null;
+        PollSession.showResults = false;
+        io.emit('poll:waitingForQuestion');
+        console.log('⏳ Students are now waiting - teacher is preparing question');
+    });
 
     socket.on('teacher:askQuestion', (question) => {
         // Reset  new question
@@ -36,8 +61,14 @@ function registerPollSocket(io, socket) {
 
         PollSession.timeLimit = question.timeLimit || 60;
 
+        // Send question with server timestamp for sync
+        const questionWithTimestamp = {
+            ...question,
+            serverTimestamp: Date.now(),
+            timeLimit: PollSession.timeLimit
+        };
 
-        io.emit('poll:newQuestion', question);
+        io.emit('poll:newQuestion', questionWithTimestamp);
         console.log(`📝 New question: ${question.text}`);
 
 
@@ -45,10 +76,21 @@ function registerPollSocket(io, socket) {
             stopTimer(PollSession.timer);
         }
 
-        PollSession.timer = startTimer(PollSession.timeLimit, () => {
-
-            handleQuestionComplete();
-        });
+        // Start timer with broadcasting capability
+        PollSession.timer = startTimer(
+            PollSession.timeLimit,
+            () => {
+                handleQuestionComplete();
+            },
+            null, // onTick callback
+            (timeLeft) => {
+                // Broadcast remaining time to all students
+                io.emit('poll:timeUpdate', {
+                    timeLeft,
+                    serverTimestamp: Date.now()
+                });
+            }
+        );
     });
 
     socket.on('student:submitAnswer', (answer) => {

@@ -4,12 +4,18 @@ class Timer {
     }
 
 
-    startTimer(duration, onComplete, onTick = null) {
+    startTimer(duration, onComplete, onTick = null, broadcastCallback = null) {
         const timerId = `timer_${Date.now()}_${Math.random()}`;
         let timeLeft = duration;
 
         const interval = setInterval(() => {
             timeLeft--;
+
+
+            // Broadcast time updates to all connected clients
+            if (broadcastCallback && typeof broadcastCallback === 'function') {
+                broadcastCallback(timeLeft);
+            }
 
 
             if (onTick && typeof onTick === 'function') {
@@ -27,14 +33,15 @@ class Timer {
             }
         }, 1000);
 
-        // Store timer
+        // Store timer with broadcast callback
         this.timers.set(timerId, {
             interval,
             duration,
             timeLeft,
             startTime: Date.now(),
             onComplete,
-            onTick
+            onTick,
+            broadcastCallback
         });
 
         console.log(`⏰ Timer started: ${duration} seconds (ID: ${timerId})`);
@@ -103,8 +110,8 @@ class Timer {
 const timerInstance = new Timer();
 
 
-const startTimer = (duration, onComplete, onTick) => {
-    return timerInstance.startTimer(duration, onComplete, onTick);
+const startTimer = (duration, onComplete, onTick, broadcastCallback) => {
+    return timerInstance.startTimer(duration, onComplete, onTick, broadcastCallback);
 };
 
 const stopTimer = (timerId) => {

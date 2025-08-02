@@ -10,25 +10,73 @@ import AddQuestion from './components/addQuestion';
 type UserRole = 'student' | 'teacher' | null;
 type AppState = 'welcome' | 'start' | 'loading' | 'question' | 'results' | 'addQuestion';
 
+interface QuestionData {
+  text: string;
+  options: string[];
+  timeLimit: number;
+  correctAnswer?: number;
+  serverTimestamp?: number;
+}
+
 function App() {
   const [currentState, setCurrentState] = useState<AppState>('welcome');
   const [userRole, setUserRole] = useState<UserRole>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [studentName, setStudentName] = useState('');
+  const [currentQuestion, setCurrentQuestion] = useState<QuestionData | null>(null);
+  const [serverTimeLeft, setServerTimeLeft] = useState<number>(0);
 
   useEffect(() => {
-    // Initialize socket connection when user selects student role
     if (userRole === 'student') {
-      const newSocket = io('http://localhost:5000'); // Adjust URL to match your server
+      const newSocket = io('http://localhost:5000');
       setSocket(newSocket);
 
-      // Listen for question events
-      newSocket.on('poll:newQuestion', () => {
+
+      newSocket.on('connect', () => {
+        console.log('Student socket connected:', newSocket.id);
+      });
+
+
+      newSocket.on('poll:joined', ({ name }) => {
+        console.log('Successfully joined poll:', name);
+        setCurrentState('loading');
+      });
+
+
+      newSocket.on('poll:newQuestion', (question: QuestionData) => {
+        console.log('App.tsx: Received new question:', question);
+        setCurrentQuestion(question);
+        setServerTimeLeft(question.timeLimit || 60);
         setCurrentState('question');
       });
 
+
+      // Handle server time updates for synchronized countdown
+      newSocket.on('poll:timeUpdate', ({ timeLeft }: { timeLeft: number; serverTimestamp: number }) => {
+        console.log('App.tsx: Received time update:', timeLeft);
+        setServerTimeLeft(timeLeft);
+      });
+
       newSocket.on('poll:waitingForQuestion', () => {
+        console.log('App.tsx: Waiting for question...');
+        setCurrentQuestion(null);
+        setServerTimeLeft(0);
         setCurrentState('loading');
+      });
+
+
+      newSocket.on('poll:complete', (data) => {
+        console.log('App.tsx: Question completed, transitioning to results/waiting:', data);
+        setServerTimeLeft(0);
+
+        setTimeout(() => {
+          setCurrentQuestion(null);
+          setCurrentState('loading');
+        }, 2000);
+      });
+
+      // Handle connection errors
+      newSocket.on('connect_error', (error) => {
+        console.error('Socket connection error:', error);
       });
 
       return () => {
@@ -46,7 +94,6 @@ function App() {
     }
   };
   const handleStudentJoin = (name: string) => {
-    setStudentName(name);
     setCurrentState('loading');
 
     // Join the poll session
@@ -67,7 +114,11 @@ function App() {
         return <Loading />;
 
       case 'question':
-        return <Question />;
+        return currentQuestion ? (
+          <Question socket={socket} questionData={currentQuestion} serverTimeLeft={serverTimeLeft} />
+        ) : (
+          <Loading />
+        );
 
       case 'addQuestion':
         return <AddQuestion />;
