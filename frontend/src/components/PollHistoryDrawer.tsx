@@ -41,30 +41,12 @@ function PollHistoryDrawer({ socket, isOpen, onClose }: PollHistoryDrawerProps) 
         }
     }, [isOpen, socket]);
 
-    // Mock data for demonstration (remove when server integration is complete)
+    // Don't show mock data - let it show the empty state message
     useEffect(() => {
-        if (isOpen && questionHistory.length === 0) {
-            // Mock data based on the image
-            const mockHistory: HistoryQuestion[] = [
-                {
-                    text: "Which planet is known as the Red Planet?",
-                    options: ["Mars", "Venus", "Jupiter", "Saturn"],
-                    correctAnswer: 0,
-                    results: { "Mars": 15, "Venus": 1, "Jupiter": 1, "Saturn": 3 },
-                    completedAt: new Date()
-                },
-                {
-                    text: "Which planet is the largest in our solar system?",
-                    options: ["Earth", "Mars", "Jupiter", "Saturn"],
-                    correctAnswer: 2,
-                    results: { "Earth": 2, "Mars": 1, "Jupiter": 12, "Saturn": 5 },
-                    completedAt: new Date()
-                }
-            ];
-            setQuestionHistory(mockHistory);
+        if (isOpen && questionHistory.length === 0 && !loading) {
             setLoading(false);
         }
-    }, [isOpen, questionHistory.length]);
+    }, [isOpen, questionHistory.length, loading]);
 
     if (!isOpen) return null;
 
