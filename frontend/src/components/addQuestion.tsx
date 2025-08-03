@@ -9,6 +9,7 @@ function AddQuestion() {
         { text: '', isCorrect: false },
         { text: '', isCorrect: false }
     ]);
+
     const [socket, setSocket] = useState<Socket | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);

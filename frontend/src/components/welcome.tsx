@@ -7,7 +7,7 @@ function Welcome({ onRoleSelect }: WelcomeProps) {
         <div className="flex justify-center items-center flex-col min-h-screen bg-blue-100">
             <div className="text-center mb-12 max-w-2xl p-2">
                 <h1 className="text-4xl font-normal mb-4 text-gray-900">
-                    Welcome to the <span className="font-semibold">Live Polling System</span>
+                    Welcome to the <span className="font-semibold">Live  Polling System</span>
                 </h1>
                 <p className="text-lg font-normal text-gray-600 text-wrap">
                     Please select the role that best describes you to begin using the live polling system
