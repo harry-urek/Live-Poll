@@ -1,6 +1,6 @@
-interface WelcomeProps {
-    onRoleSelect: (role: 'student' | 'teacher') => void;
-}
+
+import type { WelcomeProps } from '../types';
+
 
 function Welcome({ onRoleSelect }: WelcomeProps) {
     return (

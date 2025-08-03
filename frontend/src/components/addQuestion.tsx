@@ -13,7 +13,7 @@ function AddQuestion() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
 
-    // Initialize socket connection for teacher
+
     useEffect(() => {
         const newSocket = io('http://localhost:5000');
         setSocket(newSocket);
