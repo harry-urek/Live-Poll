@@ -1,5 +1,5 @@
-import { QuestionData, OptionResult, HistoryQuestion } from '../types';
-import { VALIDATION_RULES } from '../constants';
+import { QuestionData, OptionResult, HistoryQuestion } from "../types";
+import { VALIDATION_RULES } from "../constants";
 
 /**
  * Validates student name input
@@ -41,13 +41,20 @@ export const calculatePollResults = (
   results: Record<string, number>,
   question: QuestionData
 ): OptionResult[] => {
-  const totalVotes = Object.values(results).reduce((sum, count) => sum + count, 0);
-  
+  const totalVotes = Object.values(results).reduce(
+    (sum, count) => sum + count,
+    0
+  );
+
   return question.options.map((option, index) => ({
     option,
     count: results[option] || 0,
-    percentage: totalVotes > 0 ? Math.round(((results[option] || 0) / totalVotes) * 100) : 0,
-    isCorrect: question.correctAnswer !== undefined && index === question.correctAnswer,
+    percentage:
+      totalVotes > 0
+        ? Math.round(((results[option] || 0) / totalVotes) * 100)
+        : 0,
+    isCorrect:
+      question.correctAnswer !== undefined && index === question.correctAnswer,
   }));
 };
 
@@ -57,24 +64,31 @@ export const calculatePollResults = (
 export const formatTimeRemaining = (seconds: number): string => {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
-  return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  return `${minutes.toString().padStart(2, "0")}:${remainingSeconds
+    .toString()
+    .padStart(2, "0")}`;
 };
 
 /**
  * Gets color class for progress bars based on ranking and correctness
  */
-export const getProgressBarColor = (index: number, isCorrect: boolean): string => {
-  if (isCorrect) return 'bg-green-500';
-  if (index === 0) return 'bg-purple-500'; // Highest percentage
-  if (index === 1) return 'bg-blue-500';   // Second highest
-  if (index === 2) return 'bg-orange-500'; // Third highest
-  return 'bg-gray-500'; // Others
+export const getProgressBarColor = (
+  index: number,
+  isCorrect: boolean
+): string => {
+  if (isCorrect) return "bg-green-500";
+  if (index === 0) return "bg-purple-500"; // Highest percentage
+  if (index === 1) return "bg-blue-500"; // Second highest
+  if (index === 2) return "bg-orange-500"; // Third highest
+  return "bg-gray-500"; // Others
 };
 
 /**
  * Sorts poll results by percentage (highest first)
  */
-export const sortResultsByPercentage = (results: OptionResult[]): OptionResult[] => {
+export const sortResultsByPercentage = (
+  results: OptionResult[]
+): OptionResult[] => {
   return [...results].sort((a, b) => b.percentage - a.percentage);
 };
 
@@ -86,7 +100,7 @@ export const debounce = <T extends (...args: any[]) => any>(
   delay: number
 ): ((...args: Parameters<T>) => void) => {
   let timeoutId: NodeJS.Timeout;
-  
+
   return (...args: Parameters<T>) => {
     clearTimeout(timeoutId);
     timeoutId = setTimeout(() => func.apply(null, args), delay);
@@ -105,24 +119,24 @@ export const generateQuestionId = (): string => {
  */
 export const sanitizeInput = (input: string): string => {
   return input
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;');
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;")
+    .replace(/\//g, "&#x2F;");
 };
 
 /**
  * Formats date for display
  */
 export const formatDate = (date: Date | string): string => {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  return dateObj.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+  const dateObj = typeof date === "string" ? new Date(date) : date;
+  return dateObj.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 };
 
@@ -134,11 +148,11 @@ export const isQuestionValid = (
   options: { text: string; isCorrect: boolean }[]
 ): boolean => {
   if (!validateQuestion(question)) return false;
-  
-  const validOptions = options.filter(opt => validateOption(opt.text));
+
+  const validOptions = options.filter((opt) => validateOption(opt.text));
   if (validOptions.length < 2) return false;
-  
-  const hasCorrectAnswer = options.some(opt => opt.isCorrect);
+
+  const hasCorrectAnswer = options.some((opt) => opt.isCorrect);
   return hasCorrectAnswer;
 };
 
@@ -157,7 +171,7 @@ export const throttle = <T extends (...args: any[]) => any>(
   delay: number
 ): ((...args: Parameters<T>) => void) => {
   let lastCall = 0;
-  
+
   return (...args: Parameters<T>) => {
     const now = Date.now();
     if (now - lastCall >= delay) {

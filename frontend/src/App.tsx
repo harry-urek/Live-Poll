@@ -19,7 +19,7 @@ function App() {
   } = useAppState();
 
   const {
-    isConnected,
+    // isConnected,
     currentQuestion,
     serverTimeLeft,
     pollResults,

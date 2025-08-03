@@ -1,32 +1,24 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Socket } from 'socket.io-client';
+import type { QuestionData, PollResults } from '../types';
+import { UI_MESSAGES, APP_CONFIG } from '../constants';
+import { formatTimeRemaining } from '../utils';
 import Results from './Results';
 
 interface QuestionProps {
-    socket: Socket | null;
     questionData: QuestionData;
     serverTimeLeft: number;
+    pollResults: PollResults | null;
+    onSubmitAnswer: (answer: string) => void;
+    onResultsComplete: () => void;
 }
 
-interface QuestionData {
-    text: string;
-    options: string[];
-    timeLimit: number;
-    correctAnswer?: number;
-}
-
-interface PollResults {
-    results: Record<string, number>;
-    question: QuestionData;
-}
-
-function Question({ socket, questionData, serverTimeLeft }: QuestionProps) {
+function Question({ questionData, serverTimeLeft, pollResults: initialPollResults, onSubmitAnswer, onResultsComplete }: QuestionProps) {
     const [currentQuestion, setCurrentQuestion] = useState<QuestionData | null>(null);
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [timeLeft, setTimeLeft] = useState(0);
     const [showResults, setShowResults] = useState(false);
-    const [pollResults, setPollResults] = useState<PollResults | null>(null);
+    const [pollResults, setPollResults] = useState<PollResults | null>(initialPollResults);
 
     // Update question when questionData prop changes
     useEffect(() => {
@@ -35,11 +27,18 @@ function Question({ socket, questionData, serverTimeLeft }: QuestionProps) {
             setCurrentQuestion(questionData);
             setSelectedOption(null);
             setIsSubmitted(false);
-            setTimeLeft(questionData.timeLimit || 60);
+            setTimeLeft(questionData.timeLimit || APP_CONFIG.defaultTimeLimit);
             setShowResults(false);
-            setPollResults(null);
         }
     }, [questionData]);
+
+    // Update poll results when prop changes
+    useEffect(() => {
+        if (initialPollResults) {
+            setPollResults(initialPollResults);
+            setShowResults(true);
+        }
+    }, [initialPollResults]);
 
     // Update time from server instead of local countdown
     useEffect(() => {
@@ -47,30 +46,12 @@ function Question({ socket, questionData, serverTimeLeft }: QuestionProps) {
     }, [serverTimeLeft]);
 
     const handleSubmitAnswer = useCallback(() => {
-        if (selectedOption === null || isSubmitted || !socket || !currentQuestion) return;
+        if (selectedOption === null || isSubmitted || !currentQuestion) return;
 
         const answer = currentQuestion.options[selectedOption];
-        socket.emit('student:submitAnswer', answer);
+        onSubmitAnswer(answer);
         setIsSubmitted(true);
-    }, [selectedOption, isSubmitted, socket, currentQuestion]);
-
-    useEffect(() => {
-        if (!socket) return;
-
-        console.log('Question component: Setting up socket listeners for completion events only');
-
-        // Listen for question completion and show results
-        socket.on('poll:complete', (data) => {
-            console.log('Question component: Poll completed', data);
-            setIsSubmitted(true);
-            setPollResults(data);
-            setShowResults(true);
-        });
-
-        return () => {
-            socket.off('poll:complete');
-        };
-    }, [socket]);
+    }, [selectedOption, isSubmitted, currentQuestion, onSubmitAnswer]);
 
     // Auto-submit when time runs out (server-controlled)
     useEffect(() => {
@@ -85,19 +66,13 @@ function Question({ socket, questionData, serverTimeLeft }: QuestionProps) {
         setSelectedOption(index);
     };
 
-    const handleResultsComplete = () => {
-        setShowResults(false);
-        setPollResults(null);
-        setCurrentQuestion(null);
-    };
-
     // Show results if available
     if (showResults && pollResults) {
         return (
             <Results
                 results={pollResults.results}
                 question={pollResults.question}
-                onComplete={handleResultsComplete}
+                onComplete={onResultsComplete}
             />
         );
     }
@@ -107,15 +82,13 @@ function Question({ socket, questionData, serverTimeLeft }: QuestionProps) {
             <div className="flex flex-col items-center justify-center min-h-screen bg-blue-100 px-6">
                 <div className="w-full max-w-2xl text-center">
                     <h1 className="text-2xl font-bold text-gray-900 mb-4">Question Component</h1>
-                    <p className="text-gray-600">No question data available. Waiting for question...</p>
-                    <div className="mt-4 p-4 bg-yellow-100 rounded-lg">
-                        <p className="text-sm text-gray-700">Debug: Question component loaded but no currentQuestion set</p>
-                        <p className="text-sm text-gray-700">Socket connected: {socket ? 'Yes' : 'No'}</p>
-                    </div>
+                    <p className="text-gray-600">{UI_MESSAGES.LOADING}</p>
                 </div>
             </div>
         );
     }
+
+    const timeDisplay = formatTimeRemaining(timeLeft);
 
     return (
         <>
@@ -127,7 +100,7 @@ function Question({ socket, questionData, serverTimeLeft }: QuestionProps) {
                             <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                             </svg>
-                            00:{timeLeft.toString().padStart(2, '0')}
+                            {timeDisplay}
                         </div>
                     </div>
 
@@ -177,7 +150,7 @@ function Question({ socket, questionData, serverTimeLeft }: QuestionProps) {
                             {isSubmitted && !showResults && (
                                 <div className="mt-6 flex justify-center">
                                     <div className="bg-green-100 text-green-800 px-6 py-3 rounded-lg text-lg font-medium">
-                                        ✅ Answer Submitted! Waiting for results...
+                                        {UI_MESSAGES.SUBMITTED}
                                     </div>
                                 </div>
                             )}
@@ -186,7 +159,7 @@ function Question({ socket, questionData, serverTimeLeft }: QuestionProps) {
                             {timeLeft <= 0 && !isSubmitted && !showResults && (
                                 <div className="mt-6 flex justify-center">
                                     <div className="bg-red-100 text-red-800 px-6 py-3 rounded-lg text-lg font-medium">
-                                        ⏰ Time's up! Waiting for results...
+                                        {UI_MESSAGES.TIME_UP}
                                     </div>
                                 </div>
                             )}
