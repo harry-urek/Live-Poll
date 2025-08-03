@@ -1,11 +1,11 @@
 import React from 'react';
 import { useAppState, useStudentSocket } from './hooks';
 import { USER_ROLES } from './constants';
-import Welcome from './components/Welcome';
+import Welcome from './components/welcome';
 import Start from './components/Start';
 import Loading from './components/Loading';
 import Question from './components/Question';
-import AddQuestion from './components/AddQuestion';
+import AddQuestion from './components/addQuestion';
 
 function App() {
   const {
