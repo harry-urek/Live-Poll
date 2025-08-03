@@ -1,9 +1,6 @@
-import { QuestionData, OptionResult, HistoryQuestion } from "../types";
+import type { QuestionData, OptionResult } from "../types";
 import { VALIDATION_RULES } from "../constants";
 
-/**
- * Validates student name input
- */
 export const validateStudentName = (name: string): boolean => {
   const trimmedName = name.trim();
   return (
@@ -12,9 +9,6 @@ export const validateStudentName = (name: string): boolean => {
   );
 };
 
-/**
- * Validates question text
- */
 export const validateQuestion = (question: string): boolean => {
   const trimmedQuestion = question.trim();
   return (
@@ -23,9 +17,6 @@ export const validateQuestion = (question: string): boolean => {
   );
 };
 
-/**
- * Validates option text
- */
 export const validateOption = (option: string): boolean => {
   const trimmedOption = option.trim();
   return (
@@ -34,9 +25,6 @@ export const validateOption = (option: string): boolean => {
   );
 };
 
-/**
- * Calculates poll results with percentages
- */
 export const calculatePollResults = (
   results: Record<string, number>,
   question: QuestionData
@@ -58,9 +46,6 @@ export const calculatePollResults = (
   }));
 };
 
-/**
- * Formats time remaining in MM:SS format
- */
 export const formatTimeRemaining = (seconds: number): string => {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
@@ -69,9 +54,6 @@ export const formatTimeRemaining = (seconds: number): string => {
     .padStart(2, "0")}`;
 };
 
-/**
- * Gets color class for progress bars based on ranking and correctness
- */
 export const getProgressBarColor = (
   index: number,
   isCorrect: boolean
@@ -83,40 +65,28 @@ export const getProgressBarColor = (
   return "bg-gray-500"; // Others
 };
 
-/**
- * Sorts poll results by percentage (highest first)
- */
 export const sortResultsByPercentage = (
   results: OptionResult[]
 ): OptionResult[] => {
   return [...results].sort((a, b) => b.percentage - a.percentage);
 };
 
-/**
- * Debounce function for performance optimization
- */
-export const debounce = <T extends (...args: any[]) => any>(
+export const debounce = <T extends (...args: unknown[]) => unknown>(
   func: T,
   delay: number
 ): ((...args: Parameters<T>) => void) => {
-  let timeoutId: NodeJS.Timeout;
+  let timeoutId: number;
 
   return (...args: Parameters<T>) => {
     clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func.apply(null, args), delay);
+    timeoutId = setTimeout(() => func(...args), delay);
   };
 };
 
-/**
- * Generates unique ID for questions
- */
 export const generateQuestionId = (): string => {
   return `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
-/**
- * Sanitizes user input to prevent XSS
- */
 export const sanitizeInput = (input: string): string => {
   return input
     .replace(/</g, "&lt;")
@@ -126,9 +96,6 @@ export const sanitizeInput = (input: string): string => {
     .replace(/\//g, "&#x2F;");
 };
 
-/**
- * Formats date for display
- */
 export const formatDate = (date: Date | string): string => {
   const dateObj = typeof date === "string" ? new Date(date) : date;
   return dateObj.toLocaleDateString("en-US", {
@@ -140,9 +107,6 @@ export const formatDate = (date: Date | string): string => {
   });
 };
 
-/**
- * Checks if question is valid for submission
- */
 export const isQuestionValid = (
   question: string,
   options: { text: string; isCorrect: boolean }[]
@@ -156,17 +120,11 @@ export const isQuestionValid = (
   return hasCorrectAnswer;
 };
 
-/**
- * Creates a deep copy of an object
- */
 export const deepClone = <T>(obj: T): T => {
   return JSON.parse(JSON.stringify(obj));
 };
 
-/**
- * Throttle function for performance optimization
- */
-export const throttle = <T extends (...args: any[]) => any>(
+export const throttle = <T extends (...args: unknown[]) => unknown>(
   func: T,
   delay: number
 ): ((...args: Parameters<T>) => void) => {
@@ -176,7 +134,7 @@ export const throttle = <T extends (...args: any[]) => any>(
     const now = Date.now();
     if (now - lastCall >= delay) {
       lastCall = now;
-      func.apply(null, args);
+      func(...args);
     }
   };
 };

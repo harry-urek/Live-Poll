@@ -4,7 +4,6 @@ import { APP_CONFIG, SOCKET_EVENTS } from "../constants";
 
 export class SocketService {
   private socket: Socket | null = null;
-  private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
 
   connect(): Promise<Socket> {
@@ -18,7 +17,7 @@ export class SocketService {
 
       this.socket.on("connect", () => {
         console.log("Socket connected:", this.socket?.id);
-        this.reconnectAttempts = 0;
+
         resolve(this.socket!);
       });
 
