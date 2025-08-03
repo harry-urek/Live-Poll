@@ -10,14 +10,23 @@ const server = http.createServer(app);
 // Updated CORS configuration for Vercel deployment
 const allowedOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['http://localhost:3000', 'http://localhost:5173', '*'];
+    : [
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'https://live-poll-gxy5.vercel.app',
+        'https://*.vercel.app',
+        '*'
+    ];
 
 const io = new Server(server, {
     cors: {
         origin: allowedOrigins,
-        methods: ['GET', 'POST'],
-        credentials: true
+        methods: ['GET', 'POST', 'OPTIONS'],
+        credentials: true,
+        allowedHeaders: ['Content-Type', 'Authorization']
     },
+    allowEIO3: true, // Enable Engine.IO v3 compatibility if needed
+    transports: ['websocket', 'polling']
 });
 
 app.use(cors({
@@ -25,14 +34,31 @@ app.use(cors({
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
 
-        if (allowedOrigins.indexOf(origin) === -1 && allowedOrigins.indexOf('*') === -1) {
+        // Check if origin matches any allowed origin (including wildcard patterns)
+        const isAllowed = allowedOrigins.some(allowedOrigin => {
+            if (allowedOrigin === '*') return true;
+            if (allowedOrigin.includes('*')) {
+                const pattern = allowedOrigin.replace('*', '.*');
+                const regex = new RegExp(pattern);
+                return regex.test(origin);
+            }
+            return allowedOrigin === origin;
+        });
+
+        if (!isAllowed) {
             const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
             return callback(new Error(msg), false);
         }
         return callback(null, true);
     },
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Add preflight handling
+app.options('*', cors());
+
 app.use(express.json());
 
 app.get('/', (req, res) => {
