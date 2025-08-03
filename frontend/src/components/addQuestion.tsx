@@ -1,104 +1,45 @@
-import { useState, useEffect } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { useState } from 'react';
 import PollHistoryDrawer from './PollHistoryDrawer';
+import { useTeacherSocket, useQuestionForm } from '../hooks';
+import { APP_CONFIG } from '../constants';
+import type { QuestionData } from '../types';
 
 function AddQuestion() {
-    const [question, setQuestion] = useState('');
-    const [timeLimit, setTimeLimit] = useState(60);
-    const [options, setOptions] = useState([
-        { text: '', isCorrect: false },
-        { text: '', isCorrect: false }
-    ]);
-
-    const [socket, setSocket] = useState<Socket | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
-
-
-    useEffect(() => {
-        const newSocket = io('http://localhost:5000');
-        setSocket(newSocket);
-
-        newSocket.on('connect', () => {
-            console.log('Teacher socket connected:', newSocket.id);
-        });
-
-        newSocket.on('connect_error', (error) => {
-            console.error('Teacher socket connection error:', error);
-        });
-
-        return () => {
-            newSocket.close();
-        };
-    }, []);
-
-    const addOption = () => {
-        if (options.length < 6) {
-            setOptions([...options, { text: '', isCorrect: false }]);
-        }
-    };
-
-    const removeOption = (index: number) => {
-        if (options.length > 2) {
-            setOptions(options.filter((_, i) => i !== index));
-        }
-    };
-
-    const updateOption = (index: number, text: string) => {
-        const newOptions = [...options];
-        newOptions[index].text = text;
-        setOptions(newOptions);
-    };
-
-    const setCorrectAnswer = (index: number, isCorrect: boolean) => {
-        const newOptions = options.map((option, i) => ({
-            ...option,
-            isCorrect: i === index ? isCorrect : false
-        }));
-        setOptions(newOptions);
-    };
+    
+    // Use custom hooks for socket and form management
+    const { isConnected, isSubmitting, askQuestion, getSocket } = useTeacherSocket();
+    const { 
+        question, setQuestion,
+        timeLimit, setTimeLimit,
+        options, 
+        addOption, 
+        removeOption, 
+        updateOption, 
+        setCorrectAnswer,
+        isFormValid
+    } = useQuestionForm();
 
     const handleSubmit = () => {
-        if (!socket || !question.trim() || options.every(opt => !opt.text.trim()) || isSubmitting) {
-            console.log('Cannot submit - missing socket, question, options, or already submitting');
+        if (!isConnected || !isFormValid() || isSubmitting) {
             return;
         }
 
-        setIsSubmitting(true);
-        console.log('Teacher asking question - first showing waiting message');
+        const questionData: QuestionData = {
+            text: question,
+            options: options.filter(opt => opt.text.trim()).map(opt => opt.text),
+            correctAnswer: options.findIndex(opt => opt.isCorrect),
+            timeLimit: timeLimit
+        };
 
-        // First, show waiting message to students
-        socket.emit('teacher:showWaiting');
-
-        // Add a small delay, then ask the question
-        setTimeout(() => {
-            const questionData = {
-                text: question,
-                options: options.filter(opt => opt.text.trim()).map(opt => opt.text),
-                correctAnswer: options.findIndex(opt => opt.isCorrect),
-                timeLimit: timeLimit
-            };
-
-            console.log('Now sending question:', questionData);
-            socket.emit('teacher:askQuestion', questionData);
-
-            // Reset form after successful submission
-            setTimeout(() => {
-                setIsSubmitting(false);
-                setQuestion('');
-                setOptions([
-                    { text: '', isCorrect: false },
-                    { text: '', isCorrect: false }
-                ]);
-            }, 2000);
-        }, 1000); // 1 second delay to show waiting state
+        askQuestion(questionData);
     };
 
     return (
         <>
             {/* Poll History Drawer */}
             <PollHistoryDrawer
-                socket={socket}
+                socket={getSocket()}
                 isOpen={showHistoryDrawer}
                 onClose={() => setShowHistoryDrawer(false)}
             />
@@ -140,10 +81,9 @@ function AddQuestion() {
                                 onChange={(e) => setTimeLimit(Number(e.target.value))}
                                 className="bg-white border border-gray-300 rounded px-3 py-2 text-sm text-gray-800"
                             >
-                                <option value={30}>30 seconds</option>
-                                <option value={60}>60 seconds</option>
-                                <option value={90}>90 seconds</option>
-                                <option value={120}>120 seconds</option>
+                                {APP_CONFIG.timeLimitOptions.map(time => (
+                                    <option key={time} value={time}>{time} seconds</option>
+                                ))}
                             </select>
                             <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -157,9 +97,10 @@ function AddQuestion() {
                             onChange={(e) => setQuestion(e.target.value)}
                             placeholder="Enter your question here..."
                             className="w-full h-24 bg-transparent border-none outline-none resize-none text-gray-800 placeholder-gray-400 text-lg"
+                            maxLength={APP_CONFIG.questionMaxLength}
                         />
                         <div className="flex justify-end text-sm text-gray-400 mt-2">
-                            {question.length}/100
+                            {question.length}/{APP_CONFIG.questionMaxLength}
                         </div>
                     </div>
                 </div>
@@ -210,7 +151,7 @@ function AddQuestion() {
                                         <span className="text-sm text-gray-800">No</span>
                                     </label>
 
-                                    {options.length > 2 && (
+                                    {options.length > APP_CONFIG.minOptions && (
                                         <button
                                             onClick={() => removeOption(index)}
                                             className="text-red-500 hover:text-red-700 ml-2"
@@ -226,7 +167,7 @@ function AddQuestion() {
                     </div>
 
                     {/* Add More Option Button */}
-                    {options.length < 6 && (
+                    {options.length < APP_CONFIG.maxOptions && (
                         <div className="mt-6">
                             <button
                                 onClick={addOption}
@@ -242,7 +183,7 @@ function AddQuestion() {
                 <div className="fixed bottom-8 right-8">
                     <button
                         onClick={handleSubmit}
-                        disabled={!question.trim() || options.every(opt => !opt.text.trim()) || isSubmitting}
+                        disabled={!isFormValid() || isSubmitting}
                         className="bg-purple-500 hover:bg-purple-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-8 py-3 rounded-lg text-lg font-medium shadow-lg transition-colors"
                     >
                         {isSubmitting ? 'Asking...' : 'Ask Question'}

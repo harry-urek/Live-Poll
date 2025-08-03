@@ -23,7 +23,6 @@ function Question({ questionData, serverTimeLeft, pollResults: initialPollResult
     // Update question when questionData prop changes
     useEffect(() => {
         if (questionData) {
-            console.log('Question component: Received question data via props:', questionData);
             setCurrentQuestion(questionData);
             setSelectedOption(null);
             setIsSubmitted(false);
@@ -56,7 +55,6 @@ function Question({ questionData, serverTimeLeft, pollResults: initialPollResult
     // Auto-submit when time runs out (server-controlled)
     useEffect(() => {
         if (timeLeft <= 0 && selectedOption !== null && !isSubmitted && currentQuestion) {
-            console.log('Auto-submitting answer due to server timeout');
             handleSubmitAnswer();
         }
     }, [timeLeft, selectedOption, isSubmitted, currentQuestion, handleSubmitAnswer]);
@@ -116,14 +114,16 @@ function Question({ questionData, serverTimeLeft, pollResults: initialPollResult
                                     <div
                                         key={index}
                                         onClick={() => handleOptionSelect(index)}
-                                        className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${selectedOption === index
+                                        className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
+                                            selectedOption === index
                                             ? 'border-purple-500 bg-purple-50 shadow-lg'
                                             : 'border-gray-300 bg-gray-50 hover:border-gray-400'
-                                            } ${isSubmitted || timeLeft <= 0 ? 'cursor-not-allowed opacity-70' : ''}`}
+                                        } ${isSubmitted || timeLeft <= 0 ? 'cursor-not-allowed opacity-70' : ''}`}
                                     >
                                         {/* Option Number Badge */}
-                                        <div className={`rounded-full w-8 h-8 flex items-center justify-center text-white font-medium mr-4 ${selectedOption === index ? 'bg-purple-500' : 'bg-gray-500'
-                                            }`}>
+                                        <div className={`rounded-full w-8 h-8 flex items-center justify-center text-white font-medium mr-4 ${
+                                            selectedOption === index ? 'bg-purple-500' : 'bg-gray-500'
+                                        }`}>
                                             {index + 1}
                                         </div>
                                         {/* Option Text */}
