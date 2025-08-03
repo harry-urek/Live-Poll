@@ -1,7 +1,7 @@
 import type { AppConfig } from "../types";
 
 export const APP_CONFIG: AppConfig = {
-  socketUrl: "http://localhost:5000",
+  socketUrl: import.meta.env.VITE_SOCKET_URL || "http://localhost:5000",
   questionMaxLength: 100,
   maxOptions: 6,
   minOptions: 2,
