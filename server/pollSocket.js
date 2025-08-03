@@ -153,6 +153,21 @@ function registerPollSocket(io, socket) {
         io.emit('chat:message', entry);
     });
 
+    // Student requests poll history
+    socket.on('student:getHistory', () => {
+        // Send question history to the requesting student
+        const historyData = PollSession.questionHistory.map(question => ({
+            text: question.text,
+            options: question.options,
+            correctAnswer: question.correctAnswer,
+            results: question.results,
+            completedAt: question.completedAt
+        }));
+
+        socket.emit('student:historyResponse', historyData);
+        console.log(`📚 Sent poll history to student (${historyData.length} questions)`);
+    });
+
     // Handle disconnect
     socket.on('disconnect', () => {
         const student = PollSession.students[socket.id];
@@ -178,7 +193,6 @@ function registerPollSocket(io, socket) {
             PollSession.timer = null;
         }
 
-
         if (PollSession.currentQuestion) {
             PollSession.questionHistory = PollSession.questionHistory || [];
             PollSession.questionHistory.push({
@@ -190,7 +204,7 @@ function registerPollSocket(io, socket) {
 
         PollSession.showResults = true;
 
-        // Send  results to students
+        // Send results to students
         io.emit('poll:complete', {
             results: PollSession.results,
             question: PollSession.currentQuestion
@@ -206,11 +220,11 @@ function registerPollSocket(io, socket) {
 
         console.log('📊 Question completed, results sent');
 
-        // Clear (students will see loading)
+        // Clear current question after 10 seconds (let students see results first)
         setTimeout(() => {
             PollSession.currentQuestion = null;
             io.emit('poll:waitingForQuestion');
-        }, 3000);
+        }, 10000); // Changed from 3000 to 10000 milliseconds (10 seconds)
     }
 }
 

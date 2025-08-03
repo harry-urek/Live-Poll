@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Socket } from 'socket.io-client';
+import Results from './Results';
 
 interface QuestionProps {
     socket: Socket | null;
@@ -14,11 +15,18 @@ interface QuestionData {
     correctAnswer?: number;
 }
 
+interface PollResults {
+    results: Record<string, number>;
+    question: QuestionData;
+}
+
 function Question({ socket, questionData, serverTimeLeft }: QuestionProps) {
     const [currentQuestion, setCurrentQuestion] = useState<QuestionData | null>(null);
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [timeLeft, setTimeLeft] = useState(0);
+    const [showResults, setShowResults] = useState(false);
+    const [pollResults, setPollResults] = useState<PollResults | null>(null);
 
     // Update question when questionData prop changes
     useEffect(() => {
@@ -28,6 +36,8 @@ function Question({ socket, questionData, serverTimeLeft }: QuestionProps) {
             setSelectedOption(null);
             setIsSubmitted(false);
             setTimeLeft(questionData.timeLimit || 60);
+            setShowResults(false);
+            setPollResults(null);
         }
     }, [questionData]);
 
@@ -49,10 +59,12 @@ function Question({ socket, questionData, serverTimeLeft }: QuestionProps) {
 
         console.log('Question component: Setting up socket listeners for completion events only');
 
-        // Only listen for question completion, not new questions (those come via props now)
+        // Listen for question completion and show results
         socket.on('poll:complete', (data) => {
             console.log('Question component: Poll completed', data);
             setIsSubmitted(true);
+            setPollResults(data);
+            setShowResults(true);
         });
 
         return () => {
@@ -73,6 +85,22 @@ function Question({ socket, questionData, serverTimeLeft }: QuestionProps) {
         setSelectedOption(index);
     };
 
+    const handleResultsComplete = () => {
+        setShowResults(false);
+        setPollResults(null);
+        setCurrentQuestion(null);
+    };
+
+    // Show results if available
+    if (showResults && pollResults) {
+        return (
+            <Results
+                results={pollResults.results}
+                question={pollResults.question}
+                onComplete={handleResultsComplete}
+            />
+        );
+    }
 
     if (!currentQuestion) {
         return (
@@ -90,81 +118,83 @@ function Question({ socket, questionData, serverTimeLeft }: QuestionProps) {
     }
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-blue-100 px-6">
-            <div className="w-full max-w-2xl">
-                <div className="flex justify-between items-center mb-8">
-                    <h1 className="text-2xl font-bold text-gray-900">Question</h1>
-                    <div className="flex items-center text-red-600 text-lg font-medium">
-                        <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                        </svg>
-                        00:{timeLeft.toString().padStart(2, '0')}
-                    </div>
-                </div>
-
-                <div className="bg-white shadow-xl rounded-lg mb-8">
-                    {/* Question Header */}
-                    <div className="bg-gray-800 text-white rounded-t-lg py-6 px-6">
-                        <h2 className="text-lg font-medium">{currentQuestion.text}</h2>
+        <>
+            <div className="flex flex-col items-center justify-center min-h-screen bg-blue-100 px-6">
+                <div className="w-full max-w-2xl">
+                    <div className="flex justify-between items-center mb-8">
+                        <h1 className="text-2xl font-bold text-gray-900">Question</h1>
+                        <div className="flex items-center text-red-600 text-lg font-medium">
+                            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                            </svg>
+                            00:{timeLeft.toString().padStart(2, '0')}
+                        </div>
                     </div>
 
-                    <div className="p-6">
-                        <div className="space-y-3">
-                            {currentQuestion.options.map((option, index) => (
-                                <div
-                                    key={index}
-                                    onClick={() => handleOptionSelect(index)}
-                                    className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${selectedOption === index
-                                        ? 'border-purple-500 bg-purple-50 shadow-lg'
-                                        : 'border-gray-300 bg-gray-50 hover:border-gray-400'
-                                        } ${isSubmitted || timeLeft <= 0 ? 'cursor-not-allowed opacity-70' : ''}`}
-                                >
-                                    {/* Option Number Badge */}
-                                    <div className={`rounded-full w-8 h-8 flex items-center justify-center text-white font-medium mr-4 ${selectedOption === index ? 'bg-purple-500' : 'bg-gray-500'
-                                        }`}>
-                                        {index + 1}
-                                    </div>
-                                    {/* Option Text */}
-                                    <span className="text-lg text-gray-800 font-medium">
-                                        {option}
-                                    </span>
-                                </div>
-                            ))}
+                    <div className="bg-white shadow-xl rounded-lg mb-8">
+                        {/* Question Header */}
+                        <div className="bg-gray-800 text-white rounded-t-lg py-6 px-6">
+                            <h2 className="text-lg font-medium">{currentQuestion.text}</h2>
                         </div>
 
-                        {/* Submit Button */}
-                        {selectedOption !== null && !isSubmitted && timeLeft > 0 && (
-                            <div className="mt-6 flex justify-center">
-                                <button
-                                    onClick={handleSubmitAnswer}
-                                    className="bg-purple-500 hover:bg-purple-600 text-white px-8 py-3 rounded-lg text-lg font-medium transition-colors"
-                                >
-                                    Submit Answer
-                                </button>
+                        <div className="p-6">
+                            <div className="space-y-3">
+                                {currentQuestion.options.map((option, index) => (
+                                    <div
+                                        key={index}
+                                        onClick={() => handleOptionSelect(index)}
+                                        className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${selectedOption === index
+                                            ? 'border-purple-500 bg-purple-50 shadow-lg'
+                                            : 'border-gray-300 bg-gray-50 hover:border-gray-400'
+                                            } ${isSubmitted || timeLeft <= 0 ? 'cursor-not-allowed opacity-70' : ''}`}
+                                    >
+                                        {/* Option Number Badge */}
+                                        <div className={`rounded-full w-8 h-8 flex items-center justify-center text-white font-medium mr-4 ${selectedOption === index ? 'bg-purple-500' : 'bg-gray-500'
+                                            }`}>
+                                            {index + 1}
+                                        </div>
+                                        {/* Option Text */}
+                                        <span className="text-lg text-gray-800 font-medium">
+                                            {option}
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
-                        )}
 
-                        {/* Submitted State */}
-                        {isSubmitted && (
-                            <div className="mt-6 flex justify-center">
-                                <div className="bg-green-100 text-green-800 px-6 py-3 rounded-lg text-lg font-medium">
-                                    ✅ Answer Submitted! Waiting for results...
+                            {/* Submit Button */}
+                            {selectedOption !== null && !isSubmitted && timeLeft > 0 && (
+                                <div className="mt-6 flex justify-center">
+                                    <button
+                                        onClick={handleSubmitAnswer}
+                                        className="bg-purple-500 hover:bg-purple-600 text-white px-8 py-3 rounded-lg text-lg font-medium transition-colors"
+                                    >
+                                        Submit Answer
+                                    </button>
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                        {/* Time Up State */}
-                        {timeLeft <= 0 && !isSubmitted && (
-                            <div className="mt-6 flex justify-center">
-                                <div className="bg-red-100 text-red-800 px-6 py-3 rounded-lg text-lg font-medium">
-                                    ⏰ Time's up! Waiting for results...
+                            {/* Submitted State */}
+                            {isSubmitted && !showResults && (
+                                <div className="mt-6 flex justify-center">
+                                    <div className="bg-green-100 text-green-800 px-6 py-3 rounded-lg text-lg font-medium">
+                                        ✅ Answer Submitted! Waiting for results...
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
+
+                            {/* Time Up State */}
+                            {timeLeft <= 0 && !isSubmitted && !showResults && (
+                                <div className="mt-6 flex justify-center">
+                                    <div className="bg-red-100 text-red-800 px-6 py-3 rounded-lg text-lg font-medium">
+                                        ⏰ Time's up! Waiting for results...
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 }
 
