@@ -1,37 +1,22 @@
 import { useState, useEffect } from 'react';
+import type { QuestionData, OptionResult } from '../types';
+import { calculatePollResults, getProgressBarColor, sortResultsByPercentage } from '../utils';
 
 interface ResultsProps {
     results: Record<string, number>;
-    question: {
-        text: string;
-        options: string[];
-        correctAnswer?: number;
-    };
+    question: QuestionData;
     onComplete: () => void;
-}
-
-interface OptionResult {
-    option: string;
-    count: number;
-    percentage: number;
-    isCorrect: boolean;
 }
 
 function Results({ results, question, onComplete }: ResultsProps) {
     const [showAnimation, setShowAnimation] = useState(false);
     const [timeLeft, setTimeLeft] = useState(10);
 
-    // Calculate percentages and prepare data
-    const totalVotes = Object.values(results).reduce((sum, count) => sum + count, 0);
-    const optionResults: OptionResult[] = question.options.map((option, index) => ({
-        option,
-        count: results[option] || 0,
-        percentage: totalVotes > 0 ? Math.round(((results[option] || 0) / totalVotes) * 100) : 0,
-        isCorrect: question.correctAnswer !== undefined && index === question.correctAnswer
-    }));
-
-    // Sort by percentage (highest first)
-    optionResults.sort((a, b) => b.percentage - a.percentage);
+    // Calculate and sort poll results
+    const optionResults: OptionResult[] = sortResultsByPercentage(
+        calculatePollResults(results, question)
+    );
+    const totalVotes = optionResults.reduce((sum, r) => sum + r.count, 0);
 
     // Start animation and countdown
     useEffect(() => {
@@ -57,15 +42,6 @@ function Results({ results, question, onComplete }: ResultsProps) {
             clearInterval(countdownInterval);
         };
     }, [onComplete]);
-
-    // Get color based on ranking
-    const getBarColor = (index: number, isCorrect: boolean) => {
-        if (isCorrect) return 'bg-green-500';
-        if (index === 0) return 'bg-purple-500'; // Highest percentage
-        if (index === 1) return 'bg-blue-500';   // Second highest
-        if (index === 2) return 'bg-orange-500'; // Third highest
-        return 'bg-gray-500'; // Others
-    };
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-blue-100 px-6">
@@ -115,7 +91,7 @@ function Results({ results, question, onComplete }: ResultsProps) {
                                     {/* Animated Progress Bar */}
                                     <div className="w-full bg-gray-200 rounded-full h-8 relative overflow-hidden">
                                         <div
-                                            className={`h-full rounded-full transition-all duration-1000 ease-out ${getBarColor(index, result.isCorrect)}`}
+                                            className={`h-full rounded-full transition-all duration-1000 ease-out ${getProgressBarColor(index, result.isCorrect)}`}
                                             style={{
                                                 width: showAnimation ? `${result.percentage}%` : '0%',
                                                 transition: 'width 1.5s cubic-bezier(0.4, 0, 0.2, 1)'

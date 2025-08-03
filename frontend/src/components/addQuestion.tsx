@@ -6,16 +6,16 @@ import type { QuestionData } from '../types';
 
 function AddQuestion() {
     const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
-    
+
     // Use custom hooks for socket and form management
     const { isConnected, isSubmitting, askQuestion, getSocket } = useTeacherSocket();
-    const { 
+    const {
         question, setQuestion,
         timeLimit, setTimeLimit,
-        options, 
-        addOption, 
-        removeOption, 
-        updateOption, 
+        options,
+        addOption,
+        removeOption,
+        updateOption,
         setCorrectAnswer,
         isFormValid
     } = useQuestionForm();

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { VALIDATION_RULES } from '../constants';
+// import type { UserRole } from '../types';
 
 interface StartProps {
     onStudentJoin: (name: string) => void;
@@ -6,10 +8,11 @@ interface StartProps {
 
 function Start({ onStudentJoin }: StartProps) {
     const [name, setName] = useState('');
-
+    const isNameValid = name.trim().length >= VALIDATION_RULES.STUDENT_NAME.MIN_LENGTH &&
+        name.trim().length <= VALIDATION_RULES.STUDENT_NAME.MAX_LENGTH;
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (name.trim()) {
+        if (isNameValid) {
             onStudentJoin(name.trim());
         }
     };
@@ -39,13 +42,14 @@ function Start({ onStudentJoin }: StartProps) {
                             className="w-full px-10 py-4 text-lg text-gray-800 text-base-300 bg-gray-100 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 placeholder-gray-500"
                             placeholder="Your Name"
                             required
+                            maxLength={VALIDATION_RULES.STUDENT_NAME.MAX_LENGTH}
                         />
                     </div>
 
                     <div className="flex justify-center mt-8">
                         <button
                             type="submit"
-                            disabled={!name.trim()}
+                            disabled={!isNameValid}
                             className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-8 py-3 rounded-full text-lg font-medium transition-colors duration-200 min-w-[120px]"
                         >
                             Join Poll

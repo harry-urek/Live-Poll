@@ -13,6 +13,10 @@ export class SocketService {
         reconnection: true,
         reconnectionAttempts: this.maxReconnectAttempts,
         reconnectionDelay: 1000,
+        withCredentials: true,
+        transports: ["websocket", "polling"],
+        forceNew: true,
+        timeout: 20000,
       });
 
       this.socket.on("connect", () => {
