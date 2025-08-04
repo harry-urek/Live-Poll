@@ -8,9 +8,6 @@ import type {
 } from "../types";
 import { USER_ROLES } from "../constants";
 
-/**
- * Custom hook for managing socket connection and student functionality
- */
 export const useStudentSocket = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState<QuestionData | null>(
@@ -126,7 +123,7 @@ export const useTeacherSocket = () => {
   }, []);
 
   const askQuestion = useCallback(
-    async (question: QuestionData) => {
+    async (question: QuestionData, onSuccess?: () => void) => {
       if (!isConnected || isSubmitting) return;
 
       setIsSubmitting(true);
@@ -138,9 +135,13 @@ export const useTeacherSocket = () => {
       setTimeout(() => {
         socketService.askQuestion(question);
 
-        // Reset submitting state after question is sent
+        // Reset submitting state and call success callback after question is sent
         setTimeout(() => {
           setIsSubmitting(false);
+          // Clear the form after successful submission
+          if (onSuccess) {
+            onSuccess();
+          }
         }, 2000);
       }, 1000);
     },
@@ -240,6 +241,7 @@ export const useQuestionForm = () => {
 
   const resetForm = useCallback(() => {
     setQuestion("");
+    setTimeLimit(60);
     setOptions([
       { text: "", isCorrect: false },
       { text: "", isCorrect: false },

@@ -59,9 +59,9 @@ export const getProgressBarColor = (
   isCorrect: boolean
 ): string => {
   if (isCorrect) return "bg-green-500";
-  if (index === 0) return "bg-purple-500"; // Highest percentage
-  if (index === 1) return "bg-blue-500"; // Second highest
-  if (index === 2) return "bg-orange-500"; // Third highest
+  if (index === 0) return "bg-purple-500";
+  if (index === 1) return "bg-blue-500";
+  if (index === 2) return "bg-orange-500";
   return "bg-gray-500"; // Others
 };
 

@@ -1,7 +1,7 @@
 import type { AppConfig } from "../types";
 
 export const APP_CONFIG: AppConfig = {
-  socketUrl: import.meta.env.VITE_SOCKET_URL || "https://live-poll-gxy5-hz7zpssjm-hari-oms-projects.vercel.app",
+  socketUrl: "localhost:5000", // Default for development
   questionMaxLength: 100,
   maxOptions: 6,
   minOptions: 2,
